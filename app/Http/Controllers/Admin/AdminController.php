@@ -51,7 +51,9 @@ class AdminController extends Controller
             return response()->json(['error'=>$validator->errors()], 401);            
         }
         
-        if($user = User::where('email', '=', $input['email'])->first()){
+        if($user = User::where('email', '=', $input['email'])
+                            ->where('status', 1)
+                            ->first()){
             
             $success['status'] =  true;
             $success['user'] =  $user; 

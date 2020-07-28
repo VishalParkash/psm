@@ -147,7 +147,7 @@ class ClientController extends Controller
                     if($userRequest->invitationSent ==1){
 		                $HistoryData['share_id'] = $userRequest->share_id;
 		                $HistoryData['client_id'] = $CreateClient->id;
-		                $HistoryData['description'] = "Invitation sent to ".$userRequest->clientName;
+		                $HistoryData['description'] = "Invitation sent to <span class='addHistory'>".$userRequest->clientName."</span>";
 		                $HistoryData['activityType'] = "email_invitation";
 		                $HistoryData['loginType'] = "adminLogin";
 		                $HistoryData['createdBy'] = $createdBy;
@@ -158,7 +158,7 @@ class ClientController extends Controller
                 }
 	        $HistoryData['share_id'] = $userRequest->share_id;
             $HistoryData['client_id'] = $CreateClient->id;
-            $HistoryData['description'] = "Contact created by ".ucwords($this->getAdminName($createdBy));
+            $HistoryData['description'] = "Contact created by <span class='addHistory'>".ucwords($this->getAdminName($createdBy))."</span>";
             $HistoryData['activityType'] = "new_contact";
             $HistoryData['loginType'] = "adminLogin";
             $HistoryData['createdBy'] = $createdBy;
@@ -245,7 +245,7 @@ class ClientController extends Controller
                     if($userRequest->invitationSent ==1){
                         $HistoryData['share_id'] = $userRequest->share_id;
                         $HistoryData['client_id'] = $client_id;
-                        $HistoryData['description'] = "Invitation sent to ".$userRequest->clientName;
+                        $HistoryData['description'] = "Invitation sent to <span class='addHistory'>".$userRequest->clientName. "</span>";
                         $HistoryData['activityType'] = "email_invitation";
                         $HistoryData['loginType'] = "adminLogin";
                         $HistoryData['createdBy'] = $updatedBy;
@@ -256,7 +256,7 @@ class ClientController extends Controller
                 }
             $HistoryData['share_id'] = $userRequest->share_id;
             $HistoryData['client_id'] = $client_id;
-            $HistoryData['description'] = "Contact updated by ".ucwords($this->getAdminName($updatedBy));
+            $HistoryData['description'] = "Contact updated by <span class='addHistory'>".ucwords($this->getAdminName($updatedBy))."</span>";
             $HistoryData['activityType'] = "contact_update";
             $HistoryData['loginType'] = "adminLogin";
             $HistoryData['createdBy'] = $updatedBy;

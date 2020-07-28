@@ -22,8 +22,8 @@ class ComposerStaticInit7f70701ee515834ac86e30e49bbb8ff6
         'def43f6c87e4f8dfd0c9e1b1bab14fe8' => __DIR__ . '/..' . '/symfony/polyfill-iconv/bootstrap.php',
         '2c102faa651ef8ea5874edb585946bce' => __DIR__ . '/..' . '/swiftmailer/swiftmailer/lib/swift_required.php',
         '801c31d8ed748cfa537fa45402288c95' => __DIR__ . '/..' . '/psy/psysh/src/functions.php',
-        '7e9bd612cc444b3eed788ebbe46263a0' => __DIR__ . '/..' . '/laminas/laminas-zendframework-bridge/src/autoload.php',
         '538ca81a9a966a6716601ecf48f4eaef' => __DIR__ . '/..' . '/opis/closure/functions.php',
+        '7e9bd612cc444b3eed788ebbe46263a0' => __DIR__ . '/..' . '/laminas/laminas-zendframework-bridge/src/autoload.php',
         'e39a8b23c42d4e1452234d762b03835a' => __DIR__ . '/..' . '/ramsey/uuid/src/functions.php',
         '07d7f1a47144818725fd8d91a907ac57' => __DIR__ . '/..' . '/laminas/laminas-diactoros/src/functions/create_uploaded_file.php',
         'da94ac5d3ca7d2dbab84ce561ce72bfd' => __DIR__ . '/..' . '/laminas/laminas-diactoros/src/functions/marshal_headers_from_sapi.php',
@@ -128,6 +128,7 @@ class ComposerStaticInit7f70701ee515834ac86e30e49bbb8ff6
         'M' => 
         array (
             'Monolog\\' => 8,
+            'MagicLink\\' => 10,
         ),
         'L' => 
         array (
@@ -389,6 +390,10 @@ class ComposerStaticInit7f70701ee515834ac86e30e49bbb8ff6
         array (
             0 => __DIR__ . '/..' . '/monolog/monolog/src/Monolog',
         ),
+        'MagicLink\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src',
+        ),
         'League\\OAuth2\\Server\\' => 
         array (
             0 => __DIR__ . '/..' . '/league/oauth2-server/src',
@@ -585,6 +590,7 @@ class ComposerStaticInit7f70701ee515834ac86e30e49bbb8ff6
 
     public static $classMap = array (
         'App\\Admin' => __DIR__ . '/../..' . '/app/Admin.php',
+        'App\\AdminAccess' => __DIR__ . '/../..' . '/app/AdminAccess.php',
         'App\\Assistance' => __DIR__ . '/../..' . '/app/Assistance.php',
         'App\\Client' => __DIR__ . '/../..' . '/app/Client.php',
         'App\\ClientShare' => __DIR__ . '/../..' . '/app/ClientShare.php',
@@ -610,6 +616,7 @@ class ComposerStaticInit7f70701ee515834ac86e30e49bbb8ff6
         'App\\Http\\Controllers\\Client\\UserController' => __DIR__ . '/../..' . '/app/Http/Controllers/Client/UserController.php',
         'App\\Http\\Controllers\\Controller' => __DIR__ . '/../..' . '/app/Http/Controllers/Controller.php',
         'App\\Http\\Controllers\\SocialController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/SocialController.php',
+        'App\\Http\\Controllers\\Super\\AccessController' => __DIR__ . '/../..' . '/app/Http/Controllers/Super/AccessController.php',
         'App\\Http\\Kernel' => __DIR__ . '/../..' . '/app/Http/Kernel.php',
         'App\\Http\\Middleware\\Authenticate' => __DIR__ . '/../..' . '/app/Http/Middleware/Authenticate.php',
         'App\\Http\\Middleware\\CheckForMaintenanceMode' => __DIR__ . '/../..' . '/app/Http/Middleware/CheckForMaintenanceMode.php',
@@ -626,6 +633,7 @@ class ComposerStaticInit7f70701ee515834ac86e30e49bbb8ff6
         'App\\Profile' => __DIR__ . '/../..' . '/app/Profile.php',
         'App\\ProfileNote' => __DIR__ . '/../..' . '/app/ProfileNote.php',
         'App\\Project' => __DIR__ . '/../..' . '/app/Project.php',
+        'App\\ProjectGallery' => __DIR__ . '/../..' . '/app/ProjectGallery.php',
         'App\\Providers\\AppServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AppServiceProvider.php',
         'App\\Providers\\AuthServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AuthServiceProvider.php',
         'App\\Providers\\BroadcastServiceProvider' => __DIR__ . '/../..' . '/app/Providers/BroadcastServiceProvider.php',
@@ -3691,6 +3699,21 @@ class ComposerStaticInit7f70701ee515834ac86e30e49bbb8ff6
         'League\\OAuth2\\Server\\ResponseTypes\\BearerTokenResponse' => __DIR__ . '/..' . '/league/oauth2-server/src/ResponseTypes/BearerTokenResponse.php',
         'League\\OAuth2\\Server\\ResponseTypes\\RedirectResponse' => __DIR__ . '/..' . '/league/oauth2-server/src/ResponseTypes/RedirectResponse.php',
         'League\\OAuth2\\Server\\ResponseTypes\\ResponseTypeInterface' => __DIR__ . '/..' . '/league/oauth2-server/src/ResponseTypes/ResponseTypeInterface.php',
+        'MagicLink\\Actions\\ActionInterface' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Actions/ActionInterface.php',
+        'MagicLink\\Actions\\DownloadFileAction' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Actions/DownloadFileAction.php',
+        'MagicLink\\Actions\\LoginAction' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Actions/LoginAction.php',
+        'MagicLink\\Actions\\ResponseAction' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Actions/ResponseAction.php',
+        'MagicLink\\Actions\\ViewAction' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Actions/ViewAction.php',
+        'MagicLink\\Controllers\\MagicLinkController' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Controllers/MagicLinkController.php',
+        'MagicLink\\Events\\MagicLinkWasCreated' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Events/MagicLinkWasCreated.php',
+        'MagicLink\\Events\\MagicLinkWasVisited' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Events/MagicLinkWasVisited.php',
+        'MagicLink\\MagicLink' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/MagicLink.php',
+        'MagicLink\\MagicLinkServiceProvider' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/MagicLinkServiceProvider.php',
+        'MagicLink\\Middlewares\\MagiclinkMiddleware' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Middlewares/MagiclinkMiddleware.php',
+        'MagicLink\\Responses\\RedirectResponse' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Responses/RedirectResponse.php',
+        'MagicLink\\Responses\\Response' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Responses/Response.php',
+        'MagicLink\\Responses\\ResponseContract' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Responses/ResponseContract.php',
+        'MagicLink\\Responses\\ViewResponse' => __DIR__ . '/..' . '/cesargb/laravel-magiclink/src/Responses/ViewResponse.php',
         'Mobile_Detect' => __DIR__ . '/..' . '/mobiledetect/mobiledetectlib/Mobile_Detect.php',
         'Mockery' => __DIR__ . '/..' . '/mockery/mockery/library/Mockery.php',
         'Mockery\\Adapter\\Phpunit\\MockeryPHPUnitIntegration' => __DIR__ . '/..' . '/mockery/mockery/library/Mockery/Adapter/Phpunit/MockeryPHPUnitIntegration.php',

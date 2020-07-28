@@ -1,4 +1,11 @@
 <?php return array (
+  'cesargb/laravel-magiclink' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'MagicLink\\MagicLinkServiceProvider',
+    ),
+  ),
   'facade/ignition' => 
   array (
     'providers' => 

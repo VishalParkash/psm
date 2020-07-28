@@ -11,6 +11,7 @@ use App\User;
 use App\Project;
 use App\Technology;
 use App\Gallery;
+use App\ProjectGallery;
 use App\SharePortfolio;
 
 use Carbon\Carbon;
@@ -102,14 +103,19 @@ trait CommonTrait	{
             // echo "<pre>";print_r($getProfileImageName);
             $File = $getProfileImageName['galleryImage'];
             $key = "gallery/".$File;
+        }elseif ($userType == 'ProjectGallery') {
+            $getProfileImageName = ProjectGallery::select('galleryImage')->where("id","=",$profile_id)->first()->toArray();
+            // echo "<pre>";print_r($getProfileImageName);
+            $File = $getProfileImageName['galleryImage'];
+            $key = "gallery/".$File;
         }
-		
+
         if(empty($File)){
             return null;
         }
 		$BucketName = 'profile-sharing-app';
         // $key = "profile/".$image;
-
+        
 		$s3 = \Storage::disk('s3');
         if (!$s3->exists($key)) {
             return null;
@@ -126,7 +132,7 @@ trait CommonTrait	{
             //     $expiry = "+10 minutes";
             // }
 
-            $expiry = "+10 minutes";
+            $expiry =  "+1440 minutes";
             $request = $client->createPresignedRequest($command, $expiry);
             return $imageUrl =  (string) $request->getUri();
         }
@@ -167,7 +173,7 @@ trait CommonTrait	{
                 'Key'    => $key
             ]);
 
-            $expiry = "+10 minutes";
+            $expiry =  "+1440 minutes";
             $request = $client->createPresignedRequest($command, $expiry);
             return $imageUrl =  (string) $request->getUri();
         }

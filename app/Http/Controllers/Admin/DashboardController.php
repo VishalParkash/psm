@@ -56,27 +56,41 @@ class DashboardController extends Controller
             $getClients = array();
             $clientEmail = '';
             $count = 0;
+            $arrayProfile= array();
+            $ShareDetails= array();
         foreach($Shares as $share){
             $Ids = $share['profileShared'];
             $ids = explode(',', $Ids);
             if(!empty($ids)){
                 $profiles= array();
                 $ProfileArr= array();
+                $arrayProfile= array();
                 foreach ($ids as $portfolio_id) {
                     if(!empty($portfolio_id)){
 
-                        $SharePortfolio = SharePortfolio::select('profile_id', 'lastViewedOn')
+                        $getProfileIds= Portfolio::select('profile_id')
+                                                            ->where('id', $portfolio_id)
+                                                            ->where('status', 1)
+                                                            ->where('profileStatus', 'Publish')
+                                                            ->first();
+                        if(!empty($getProfileIds)){
+
+                            $arrayProfile[] = ($portfolio_id);
+                            $SharePortfolio = SharePortfolio::select('profile_id', 'lastViewedOn')
                                                         ->where('portfolio_id', $portfolio_id)
                                                         ->where('share_id', $share['id'])
                                                         ->first();
                         if(!empty($SharePortfolio)){
                             $SharePortfolio = $SharePortfolio->toArray();
-                            $profiles = Profile::where('id', '=', $SharePortfolio['profile_id'])->first();
+                            $profiles = Profile::where('id', '=', $SharePortfolio['profile_id'])
+                                                 ->where('resoureStatus', 'Publish')
+                                                ->first();
                             if(!empty($profiles)){
                                 $profiles = $profiles->toArray();
                                 $profiles['profile_title'] = $this->getPortFolioTitle($portfolio_id);
                                 $profiles['image'] = $this->getImageFromS3($SharePortfolio['profile_id'], 'Profile');
                                 $profiles['portfolio_id'] = $portfolio_id;
+                                $profiles['education'] = json_decode($profiles['education']);
                                 
                                 if(!empty($SharePortfolio['lastViewedOn'])){
                                     $PortFolio_diff = Carbon::parse($SharePortfolio['lastViewedOn'])->diffForHumans();
@@ -84,17 +98,23 @@ class DashboardController extends Controller
                                 }
                             }
                         }else{
-                                $getProfileIds= Portfolio::select('profile_id')->where('id', $portfolio_id)->first();
-                                $profiles = Profile::where('id', '=', $getProfileIds->profile_id)->first();
+                                
+                                $profiles = Profile::where('id', '=', $getProfileIds->profile_id)
+                                                    ->where('resoureStatus', 'Publish')
+                                                    ->first();
                                 if(!empty($profiles)){
                                     $profiles = $profiles->toArray();
                                     $profiles['profile_title'] = $this->getPortFolioTitle($portfolio_id);
                                     $profiles['image'] = $this->getImageFromS3($getProfileIds->profile_id, 'Profile');
                                     $profiles['portfolio_id'] = $portfolio_id;
+                                    $profiles['education'] = json_decode($profiles['education']);
                                     
                                     
                                 }
                         }
+                        }else{
+                            $profiles = array();
+                        }  
                     }   
                     if(!empty($profiles)){
                         $ProfileArr[] = $profiles;    
@@ -113,6 +133,12 @@ class DashboardController extends Controller
             if(!empty($share['lastViewedOn'])){
                 $diff = Carbon::parse($share['lastViewedOn'])->diffForHumans();
                 $share['lastViewedOn'] = $diff;    
+            }
+            // echo "<pre>";print_r($arrayProfile);
+            if(!empty($arrayProfile)){
+                $share['profileShared'] = implode(",", $arrayProfile);    
+            }else{
+                $share['profileShared'] = null;
             }
             
             $share['clientContact'] = rtrim($clientEmail, ",");

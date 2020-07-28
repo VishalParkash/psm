@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\InvitationMail;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Config;
+
 
 class ShareController extends Controller
 {
@@ -85,6 +87,7 @@ class ShareController extends Controller
      */
     public function create(Request $request)
     {
+
         $clientAdded =false;
         $QueryStr = Str::random(15);
         $requestData = trim(file_get_contents("php://input"));
@@ -99,7 +102,8 @@ class ShareController extends Controller
         // $UrlToShare = "https://localhost:3000/".$QueryStr;
         // $UrlToShare = "http://localhost:3001/?key=".$QueryStr;
 
-        $UrlToShare = "https://staging.dg13bjcoiqrz8.amplifyapp.com?key=".$QueryStr;
+        // $UrlToShare = "https://staging.dg13bjcoiqrz8.amplifyapp.com?key=".$QueryStr;
+        $UrlToShare= Config::get('constants.fed.url').$QueryStr;
 
         $profileShared = $this->validateProfiles($userRequest->profileShared);
         if(!$profileShared){
@@ -125,7 +129,7 @@ class ShareController extends Controller
         if($CreateShare->save()){
 
             $HistoryData['share_id'] = $CreateShare->id;
-            $HistoryData['description'] = "Share created by ".ucwords($this->getAdminName($createdBy));
+            $HistoryData['description'] = "Share created by <span class='addHistory'>".ucwords($this->getAdminName($createdBy))."</span>";
             $HistoryData['activityType'] = "new_share";
             $HistoryData['loginType'] = "adminLogin";
             $HistoryData['createdBy'] = $createdBy;
@@ -213,7 +217,7 @@ class ShareController extends Controller
 
                     $HistoryData['share_id'] = $CreateShare->id;
                     $HistoryData['client_id'] = $CreateClientId;
-                    $HistoryData['description'] = "Contact created by ".ucwords($this->getAdminName($createdBy));
+                    $HistoryData['description'] = "Contact created by <span class='addHistory'>".ucwords($this->getAdminName($createdBy))."</span>";
                     $HistoryData['activityType'] = "new_contact";
                     $HistoryData['loginType'] = "adminLogin";
                     $HistoryData['createdBy'] = $createdBy;
@@ -224,7 +228,7 @@ class ShareController extends Controller
                     if($userRequest->EmailSent ==1){
 
                         $HistoryData['share_id'] = $CreateShare->id;
-                        $HistoryData['description'] = "Share URL shared by ".ucwords($this->getAdminName($createdBy))." to ". $userRequest->clientName." clients";
+                        $HistoryData['description'] = "Share URL shared by <span class='addHistory'>".ucwords($this->getAdminName($createdBy))."</span> to ". $userRequest->clientName." clients";
                         $HistoryData['activityType'] = "url_shared";
                         $HistoryData['loginType'] = "adminLogin";
                         $HistoryData['createdBy'] = $createdBy;
@@ -233,7 +237,7 @@ class ShareController extends Controller
 
 
                         $HistoryData['share_id'] = $CreateShare->id;
-                        $HistoryData['description'] = "Invitation sent to ".$userRequest->clientName." clients";
+                        $HistoryData['description'] = "Invitation sent to <span class='addHistory'>".$userRequest->clientName."</span> clients";
                         $HistoryData['activityType'] = "email_invitation";
                         $HistoryData['loginType'] = "adminLogin";
                         $HistoryData['createdBy'] = $createdBy;
@@ -316,7 +320,8 @@ class ShareController extends Controller
             $QueryStr = Str::random(15);
             // $UrlToShare = url('api/client/login/')."/".$QueryStr;
             // $UrlToShare = "http://localhost:3001/?key=".$QueryStr;
-            $UrlToShare = "https://staging.dg13bjcoiqrz8.amplifyapp.com?key=".$QueryStr;
+            // $UrlToShare = "https://staging.dg13bjcoiqrz8.amplifyapp.com?key=".$QueryStr;
+            $UrlToShare= Config::get('constants.fed.url').$QueryStr;
 
             // http://localhost:3001/?key=5Mvh16WUyK8VxWW
             
@@ -328,7 +333,7 @@ class ShareController extends Controller
                 $response['result'] = $getShare;
 
                 $HistoryData['share_id'] = $share_id;
-                $HistoryData['description'] = "Share url refreshed by ".ucwords($this->getAdminName($updatedBy));
+                $HistoryData['description'] = "Share url refreshed by <span class='addHistory'>".ucwords($this->getAdminName($updatedBy))."</span>";
                 $HistoryData['activityType'] = "link_refreshed";
                 $HistoryData['loginType'] = "adminLogin";
                 $HistoryData['createdBy'] = $updatedBy;
@@ -374,21 +379,24 @@ class ShareController extends Controller
 
     public function portfolioShares($portfolio_id){
 
-        $Portfolio = Portfolio::find($portfolio_id);
+        $Portfolio = Portfolio::where('id', $portfolio_id)
+                                ->where('status', 1)
+                                ->where('profileStatus', 'Publish')
+                                ->first();
         if(!empty($Portfolio)){
-            $Portfolio['portfolio_pdf_url'] = $this->getImageFromS3($portfolio_id, 'PortFolio');
-            $profile = Profile::where('id', '=', $Portfolio->profile_id)->first()->toArray();
-            $profile['image'] = $this->getImageFromS3($Portfolio->profile_id, "Profile");
-            $Shares = Share::whereRaw("find_in_set('".$portfolio_id."',profileShared)")->get()->toArray();
-            $Portfolio['profile'] = $profile;
-            $Portfolio['Shares'] = $Shares;
+            // $Portfolio['portfolio_pdf_url'] = $this->getImageFromS3($portfolio_id, 'PortFolio');
+            // $profile = Profile::where('id', '=', $Portfolio->profile_id)->first()->toArray();
+            // $profile['image'] = $this->getImageFromS3($Portfolio->profile_id, "Profile");
+            $Shares = Share::whereRaw("find_in_set('".$portfolio_id."',profileShared)")->get();
+            // $Portfolio['profile'] = $profile;
+            $portfolio['Shares'] = $Shares;
 
             $response['status'] = true;
-            $response['result'] = $Portfolio;
+            $response['result'] = $portfolio;
             $response['message'] = 'result found';
         }else{
             $response['status'] = false;
-            $response['message'] = 'We couldn’t find that resource in our records. Try again.';;
+            $response['message'] = 'No shares available for this profile.';;
         }
 
         return $response;

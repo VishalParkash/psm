@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use Validator;
 use App\Project;
 use App\User;
+use App\Portfolio;
+use App\Technology;
+use App\ProjectGallery;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Traits\CommonTrait;
 
@@ -88,10 +91,7 @@ class ProjectController extends Controller
         		(!empty($userRequest->projectName)) && 
         		(!empty($userRequest->projectDescription)) &&
         		(!empty($userRequest->technologyUsed)) &&
-        		(!empty($userRequest->projectUrl)) &&
         		(!empty($userRequest->RoleOnTheProject)) &&
-        		(!empty($userRequest->caseStudyUrl)) &&
-        		(!empty($userRequest->codeSnippets)) &&
         		(!empty($userRequest->ProjectBannerImage))){
         			$projectStatus = 'Publish';
         	}else{
@@ -101,7 +101,7 @@ class ProjectController extends Controller
         	$Project->projectStatus = $projectStatus;
         	$Project->projectDescription = (!empty($userRequest->projectDescription)) ? ($userRequest->projectDescription) : ('');
         	$Project->RoleOnTheProject = (!empty($userRequest->RoleOnTheProject)) ? ($userRequest->RoleOnTheProject) : ('');
-        	$Project->technologyUsed = (!empty($userRequest->technologyUsed)) ? ($userRequest->technologyUsed) : ('');
+        	$Project->technologyUsed = (!empty($userRequest->technologyUsed)) ? (json_encode($userRequest->technologyUsed)) : ('');
         	$Project->projectUrl = (!empty($userRequest->projectUrl)) ? ($userRequest->projectUrl) : ('');
         	$Project->caseStudyUrl = (!empty($userRequest->caseStudyUrl)) ? ($userRequest->caseStudyUrl) : ('');
         	$Project->codeSnippets = (!empty($userRequest->codeSnippets)) ? ($userRequest->codeSnippets) : ('');
@@ -112,12 +112,68 @@ class ProjectController extends Controller
         	try{
         		$Project->save();
         		$Project->refresh();
+
+                
+                    $Profile = Portfolio::select('projectName','profileStatus', 'id')->whereRaw("find_in_set('".$Project_id."',projectName)")->get();
+
+                    if(!empty($Profile)){
+                        // $Profile = $Profile->toArray();
+                        // if(!empty($Profile)){
+                            $ProjectStatusArr = array();
+                            foreach($Profile as $profiles){
+                                $projects = $profiles['projectName'];
+                                $splitProjects = explode(',', $projects);
+                                foreach($splitProjects as $getProject){
+                                    $findProject = Project::select('projectStatus')->where('id', $getProject)->first();
+                                    if(!empty($findProject)){
+                                        $ProjectStatusArr[] = $findProject->projectStatus;
+                                    }
+                                }
+                                if(in_array('Draft', $ProjectStatusArr)){
+                                    if($profiles->profileStatus == 'Publish'){
+                                        $profiles->profileStatus = 'Draft';
+                                    }
+                                    
+                                }
+                                // elseif(in_array('Publish', $ProjectStatusArr)){
+                                //     $profiles->profileStatus = 'Publish';
+                                // }
+                                // $profiles->fill($data);
+                                $profiles->save();
+                            }
+                        // }
+                    }
+
+                
+
+
         	}catch(\Exception $Ex){
         		$response['status'] = false;
-        		$response['message'] = "Cannot ".$type." the project. Please try again or contact your administrator.";
+        		// $response['message'] = $Ex->getMessage();
+                $response['message'] = "Cannot ".$type." the project. Please try again or contact your administrator.";
         		return $response;
         	}
         	$Project_id = $Project->id;
+            // $Project->createdOn = Carbon::now()->toDateTimeString();
+            $Project->createdOn = strtotime($Project->created_at);
+            $Project->updatedOn = strtotime($Project->updated_at);
+            // $Project->technologyUsed = json_decode(($Project->technologyUsed));
+            if(!empty($Project->technologyUsed)){
+            $technologiesUsed = json_decode($Project->technologyUsed);
+            $theTechnlogy = array();
+            foreach($technologiesUsed as $technologies){
+                $tech_id = $technologies->id;
+                $getTech = Technology::find($tech_id);
+                $getTech->icon = $this->getImageFromS3($tech_id, "Icon");
+                $theTechnlogy[] = $getTech;
+
+            }
+
+            if(!empty($theTechnlogy)){
+                $Project->technologyUsed = $theTechnlogy;
+            }
+        }
+
         	if(!empty($Project->ProjectBannerImage)){
         		$images = explode(',', $Project->ProjectBannerImage);
         		$ProjectGallery = array();
@@ -125,7 +181,7 @@ class ProjectController extends Controller
         		foreach($images as $fileData){
 		            $Image['ImageId'] = md5(uniqid());
 		            $Image['file'] = $fileData;
-		            $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Project");
+		            $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Gallery");
 		            $ProjectGallery[] = $Image;
 		            // $count++;
         		}
@@ -150,7 +206,39 @@ class ProjectController extends Controller
     	$Project = Project::find($project);
     	// echo "<pre>";print_r($Project);die;
     	if(!empty($Project)){
-    		$Project->ProjectBannerImage = $this->getImageFromS3($project, "Project");
+    		// $Project->ProjectBannerImage = $this->getImageFromS3($project, "gallery");
+            if(!empty($Project->ProjectBannerImage)){
+                $images = explode(',', $Project->ProjectBannerImage);
+                $ProjectGallery = array();
+                // $count = 1;
+                foreach($images as $fileData){
+                    
+                    $Image['ImageId'] = md5(uniqid());
+                    $Image['file'] = $fileData;
+                    $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Gallery");
+                    $ProjectGallery[] = $Image;
+                    // $count++;
+                }
+            }
+            if(!empty($ProjectGallery)){
+                $Project->ProjectBannerImage = $ProjectGallery;
+            }else{
+                $Project->ProjectBannerImage = $project->ProjectBannerImage;
+            }
+
+            $technologiesUsed = json_decode($Project->technologyUsed);
+            $theTechnlogy = array();
+            foreach($technologiesUsed as $technologies){
+                $tech_id = $technologies->id;
+                $getTech = Technology::find($tech_id);
+                $getTech->icon = $this->getImageFromS3($tech_id, "Icon");
+                $theTechnlogy[] = $getTech;
+
+            }
+
+            if(!empty($theTechnlogy)){
+                $Project->technologyUsed = $theTechnlogy;
+            }
     		$response['status'] = true;
     		$response['result'] = $Project;
     	}else{
@@ -162,14 +250,34 @@ class ProjectController extends Controller
 
     public function projects(){
 
-    	
-
-
     	$Projects = Project::all();
     	if(!empty($Projects)){
     		foreach($Projects as $project){
+                // $project->created_at = 
+                $project->createdOn = strtotime($project->created_at);
+                $project->updatedOn = strtotime($project->updated_at);
 
     			// $project->ProjectBannerImage = $this->getImageFromS3($project->id, "Project");
+
+                $technologiesUsed = json_decode($project->technologyUsed);
+                $theTechnlogy = array();
+                if(!empty($technologiesUsed)){
+
+
+                foreach($technologiesUsed as $technologies){
+                    $tech_id = $technologies->id;
+                    $getTech = Technology::find($tech_id);
+                    $getTech->icon = $this->getImageFromS3($tech_id, "Icon");
+                    $theTechnlogy[] = $getTech;
+
+                }
+
+                if(!empty($theTechnlogy)){
+                    $project->technologyUsed = $theTechnlogy;
+                }
+            }
+
+
 
     			if(!empty($project->ProjectBannerImage)){
         		$images = explode(',', $project->ProjectBannerImage);
@@ -179,7 +287,7 @@ class ProjectController extends Controller
         			
 		            $Image['ImageId'] = md5(uniqid());
 		            $Image['file'] = $fileData;
-		            $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Project");
+		            $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Gallery");
 		            $ProjectGallery[] = $Image;
 		            // $count++;
         		}
@@ -189,8 +297,6 @@ class ProjectController extends Controller
         	}else{
         		$project->ProjectBannerImage = $project->ProjectBannerImage;
         	}
-        	
-
     			$ProjectDetails[] = $project;
     		}
     		$response['status'] = true;
@@ -203,15 +309,83 @@ class ProjectController extends Controller
     }
 
     public function uploadProjectImage(){
+
+        $this->id = Auth::user()->id;
         $requestData = trim(file_get_contents("php://input"));
         $requestData = rtrim($requestData, ":");
         $userRequest = (json_decode($requestData, true));
-        $getImageData = $userRequest['file'];
-
-        $getImage = $this->uploadFile($getImageData, 'project', $this->id);
+        // echo "<pre>";print_r($userRequest);die;
+        $images = array();
+        // $count = time();
+        // $t=
+        foreach($userRequest as $fileData){
+            // $getImage = $this->uploadFile($getImageData, 'project', $this->id);
+            $getImage = $this->uploadFile($fileData['file'], 'gallery');
+            $Image['ImageId'] = md5(uniqid());
+            $Image['file'] = $getImage;
+            $Image['fileUrl'] = $this->getImageUrlFromS3($getImage, "Gallery");
+            $images[] = $Image;
+            // $count++;
+            
+        }
         $response['status'] = true;
-        $response['file'] =  $getImage;
-        $response['fileUrl'] =  $this->getImageUrlFromS3($getImage, "Project");
+        $response['result'] = $images;
+        return $response;
+        // $requestData = trim(file_get_contents("php://input"));
+        // $requestData = rtrim($requestData, ":");
+        // $userRequest = (json_decode($requestData, true));
+        // $getImageData = $userRequest['file'];
+
+        // $getImage = $this->uploadFile($getImageData, 'project', $this->id);
+        // $response['status'] = true;
+        // $response['file'] =  $getImage;
+        // $response['fileUrl'] =  $this->getImageUrlFromS3($getImage, "Project");
+        // return $response;
+
+    }
+
+    public function uploadGallery(){
+        $this->id = Auth::user()->id;
+        $requestData = trim(file_get_contents("php://input"));
+        $requestData = rtrim($requestData, ":");
+        $userRequest = (json_decode($requestData, true));
+        // echo "<pre>";print_r($userRequest);die;
+        $images = array();
+        // $count = time();
+        // $t=
+        foreach($userRequest as $fileData){
+            // $getImage = $this->uploadFile($getImageData, 'project', $this->id);
+            $getImage = $this->uploadFile($fileData['file'], 'gallery');
+            $Image['ImageId'] = md5(uniqid());
+            $Image['file'] = $getImage;
+            $Image['fileUrl'] = $this->getImageUrlFromS3($getImage, "ProjectGallery");
+            $images[] = $Image;
+            // $count++;
+            
+        }
+        $response['status'] = true;
+        $response['result'] = $images;
+        return $response;
+    }
+
+    public function getGallery($Project){
+        $Gallery = ProjectGallery::where('project_id', $Project)->get();
+        if(!empty($Gallery)){
+            $Gallery = $Gallery->toArray();
+            if(!empty($Gallery)){
+                foreach($Gallery as $gallery){
+                    $gallery['galleryImage'] = $this->getImageFromS3($gallery['id'], "ProjectGallery");
+                    $galleryImages[] = $gallery;
+                }
+                if(!empty($galleryImages)){
+                    $response['status'] = true;
+                    $response['result'] = $galleryImages;
+                }
+            }else{
+                $response['status'] =false;
+                $response['message'] ="No images for this profile available.";
+            }
+        }
         return $response;
 
     }
