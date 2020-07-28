@@ -10,7 +10,9 @@ use App\Portfolio;
 use App\SharePortfolio;
 use App\Assistance;
 use App\Gallery;
+use App\Technology;
 use App\Share;
+use App\Project;
 use Validator;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Traits\CommonTrait;
@@ -66,11 +68,64 @@ class UserController extends Controller {
                     $portfolioList = $portfolioList->toArray();
                     if(!empty($portfolioList)){
                         $portfolioArr = array();
+                        
                         $Shares = array();
                         foreach($portfolioList as $portfolio){
+                            // $portfolio['projectName'] = json_decode($portfolio['projectName']);
+                            if($portfolio['profileStatus'] == 'Publish'){
+                                $portfolio['shares'] = Share::whereRaw("find_in_set('".$portfolio['id']."',profileShared)")->count();
+                            }else{
+                                $portfolio['shares'] = 0;
+                            }
+                            
+                            if(!empty($portfolio['projectName'])){
+                                    $projects = explode(",", $portfolio['projectName']);
+                                    $Projects = array();
+                                    $ProjectDetails = array();
+                                    foreach($projects as $project){
+                                        $Project = Project::find($project);
+                                        if(!empty($Project)){
+                                            $Project = $Project->toArray();
+                                            if(!empty($Project['ProjectBannerImage'])){
+                                                $images = explode(',', $Project['ProjectBannerImage']);
+                                                $ProjectGallery = array();
+                                                foreach($images as $fileData){
+                                                    
+                                                    $Image['ImageId'] = md5(uniqid());
+                                                    $Image['file'] = $fileData;
+                                                    $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Project");
+                                                    $ProjectGallery[] = $Image;
+                                                }
+                                            }
+                                            if(!empty($ProjectGallery)){
+                                                $Project['ProjectBannerImage']  = $ProjectGallery;
+                                            }
+                                        }
+                                    $ProjectDetails[] = $Project;
+                                }
+                                   if(!empty($ProjectDetails)){
+                                    $portfolio['projectName'] = $ProjectDetails;
+                                    }
+                                }
 
-                            $portfolio['projectName'] = json_decode($portfolio['projectName']);
-                            $portfolio['technologiesUsed'] = json_decode($portfolio['technologiesUsed']);
+
+                            // $portfolio['technologiesUsed'] = json_decode($portfolio['technologiesUsed']);
+
+                            $technologiesUsed = json_decode($portfolio['technologiesUsed']);
+                                $theTechnlogy = array();
+                                foreach($technologiesUsed as $technologies){
+                                    $tech_id = $technologies->id;
+                                    $getTech = Technology::find($tech_id);
+                                    $getTech->icon = $this->getImageFromS3($tech_id, "Icon");
+                                    $theTechnlogy[] = $getTech;
+
+                                }
+
+                                if(!empty($theTechnlogy)){
+                                    $portfolio['technologiesUsed'] = $theTechnlogy;
+                                }
+
+
                             if(!empty($portfolio['lastViewedOn'])){
                                 $diff = Carbon::parse($portfolio['lastViewedOn'])->diffForHumans();
                                 $portfolio['lastViewedOn'] = $diff;
@@ -139,7 +194,7 @@ class UserController extends Controller {
             'email' => 'required|string|email|unique:users',
             'resource_name' => 'required|string',
             'image' => 'required|string',
-            'bannerImage' => 'required|string',
+            // 'bannerImage' => 'required|string',
             'education' => 'required',
             'galleryImages' => 'required',
         ]);
@@ -216,6 +271,7 @@ class UserController extends Controller {
                         'portfolio_pdf_url' => $ProfilesArr->portfolio_pdf_url,
                         'profile_notes' => $ProfilesArr->profile_notes,
                         'status' => $ProfilesArr->status,
+                        'validity' => $ProfilesArr->validity,
                         'createdBy' => $createdBy,
                         'updatedBy' => $updatedBy,
                     ]);
@@ -276,35 +332,54 @@ class UserController extends Controller {
             return $response;
         }
         $userRequestValidate['name'] = $userRequestValidate['resource_name'];
-        if(!empty($userRequestValidate['email'])){
-            $validator = Validator::make($userRequestValidate, [
-                'email' => 'string|email|unique:users',
-                'name' => 'required|string|unique:users',
-            ]);
-        }else{
-            $validator = Validator::make($userRequestValidate, [
-                'name' => 'required|string|unique:users',
-            ]);
+        // if(!empty($userRequestValidate['email'])){
+        //     $validator = Validator::make($userRequestValidate, [
+        //         'email' => 'string|email|unique:users',
+        //         'name' => 'required|string',
+        //     ]);
+        // }else{
+        //     $validator = Validator::make($userRequestValidate, [
+        //         'name' => 'required|string|unique:users',
+        //     ]);
+        // }
+
+        // if($validator->fails()){
+        //     return response()->json([
+        //         'status' => false,
+        //         'message' => 'Validation Error',
+        //         'error' => $validator->errors()
+        //     ]);      
+        // }
+
+        $User = User::where('email', '=', $userRequest->email)->first();
+        if(empty($User)){
+            $User = new User();
+            if(!is_null($User)){
+                $User->name = $userRequest->resource_name;
+                $User->email = (!empty($userRequest->email)) ? ($userRequest->email) : ('');
+                $User->user_role = 'Profile';
+                $User->createdBy = $updatedBy;
+                $User->updatedBy = $updatedBy;
+                $User->status = 1;
+
+                if(!$User->save()){
+                    $response['status'] = false;
+                    $response['message'] = "Something went wrong while creating the client. Please try again.";
+                    return $response;
+                }
+            }
         }
 
-        if($validator->fails()){
-            return response()->json([
-                'status' => false,
-                'message' => 'Validation Error',
-                'error' => $validator->errors()
-            ]);      
-        }
+        // $user = new User([
+        //     'name' => $userRequest->resource_name,
+        //     'email' => (!empty($userRequest->email)) ? ($userRequest->email) : (''),
+        //     'user_role' => 'Profile',
+        //     'status' => 1,
+        //     'createdBy' => $updatedBy,
+        //     'updatedBy' => $updatedBy,
+        // ]);
 
-        $user = new User([
-            'name' => $userRequest->resource_name,
-            'email' => (!empty($userRequest->email)) ? ($userRequest->email) : (''),
-            'user_role' => 'Profile',
-            'status' => 1,
-            'createdBy' => $createdBy,
-            'updatedBy' => $updatedBy,
-        ]);
-
-        ($user->save());
+        // ($user->save());
 
             $ProfileValidator = Validator::make($userRequestValidate, [
             'email' => 'string|email|unique:profiles',
@@ -329,14 +404,14 @@ class UserController extends Controller {
                 (!empty($userRequest->resource_name)) && 
                 (!empty($userRequest->email)) &&
                 (!empty($userRequest->image)) &&
-                (!empty($userRequest->bannerImage)) &&
+                // (!empty($userRequest->bannerImage)) &&
                 (!empty($userRequest->education))){
                     $resoureStatus = 'Publish';
             }else{
                 $resoureStatus = 'Draft';
             }
 
-                $Profile->user_id = $user->id;
+                $Profile->user_id = $User->id;
                 $Profile->resource_name = $userRequest->resource_name; 
                 $Profile->email = (!empty($userRequest->email)) ? ($userRequest->email) : ('');
                 $Profile->image = (!empty($userRequest->image)) ? ($userRequest->image) : ('');
@@ -377,7 +452,7 @@ class UserController extends Controller {
                     
                 }
 
-                $HistoryData['description'] = "Resource created by ".ucwords($this->getAdminName($createdBy));
+                $HistoryData['description'] = "Resource created by <span class='addHistory'>".ucwords($this->getAdminName($createdBy))."</span>";
                 $HistoryData['activityType'] = "new_profile";
                 $HistoryData['loginType'] = "adminLogin";
                 $HistoryData['createdBy'] = $createdBy;
@@ -429,33 +504,44 @@ class UserController extends Controller {
                     }
 
                 }
-        $validator = Validator::make($userRequestValidate, [
-            'email' => 'email|unique:users,email,'.$user_id.',id',
-        ]);
+        // $validator = Validator::make($userRequestValidate, [
+        //     'email' => 'email|unique:users,email,'.$user_id.',id',
+        // ]);
 
-        if($validator->fails()){
-            return response()->json([
-                'status' => false,
-                'message' => 'Validation Error',
-                'error' => $validator->errors()
-            ]);      
+        // if($validator->fails()){
+        //     return response()->json([
+        //         'status' => false,
+        //         'message' => 'Validation Error',
+        //         'error' => $validator->errors()
+        //     ]);      
+        // }
+
+        $User = User::where('email', '=', $userRequest->email)->first();
+        if(empty($User)){
+            $User = new User();
+            if(!is_null($User)){
+                $User->name = $userRequest->resource_name;
+                $User->email = (!empty($userRequest->email)) ? ($userRequest->email) : ('');
+                $User->user_role = 'Profile';
+                $User->createdBy = $updatedBy;
+                $User->updatedBy = $updatedBy;
+                $User->status = 1;
+
+                if(!$User->save()){
+                    $response['status'] = false;
+                    $response['message'] = "Something went wrong while creating the client. Please try again.";
+                    return $response;
+                }
+            }
         }
-
-        $user = new User([
-            'name' => $userRequest->resource_name,
-            'email' => $userRequest->email,
-            'user_role' => 'Profile',
-            'status' => 1,
-            'createdBy' => $updatedBy,
-            'updatedBy' => $updatedBy,
-        ]);
 
 
                 if(!empty($Profile)){
 
                     $validator = Validator::make($userRequestValidate, [
-                        // 'email' => 'required|string|email|unique:profiles,email,'.$id.',id',
-                        'resource_name' => 'required|string',
+                        'resource_name' => 'required|string|unique:profiles,resource_name,'.$id,
+                        'email' => 'string|email|unique:profiles,email,'.$id,
+                        // 'resource_name' => 'required|string|unique:profiles',
                         // 'image' => 'required|string',
                         // 'bannerImage' => 'required|string',
                         // 'education' => 'required',
@@ -474,7 +560,7 @@ class UserController extends Controller {
                         (!empty($userRequest->resource_name)) && 
                         (!empty($userRequest->email)) &&
                         (!empty($userRequest->image)) &&
-                        (!empty($userRequest->bannerImage)) &&
+                        // (!empty($userRequest->bannerImage)) &&
                         (!empty($userRequest->education))){
                             $resoureStatus = 'Publish';
                     }else{
@@ -537,7 +623,22 @@ class UserController extends Controller {
                             $portfolioArr = array();
                             foreach($Portfolio as $portfolio){
                                 $portfolio['projectName'] = json_decode($portfolio['projectName']);
-                                $portfolio['technologiesUsed'] = json_decode($portfolio['technologiesUsed']);
+                                // $portfolio['technologiesUsed'] = json_decode($portfolio['technologiesUsed']);
+
+                                $technologiesUsed = json_decode($portfolio['technologiesUsed']);
+                                $theTechnlogy = array();
+                                foreach($technologiesUsed as $technologies){
+                                    $tech_id = $technologies->id;
+                                    $getTech = Technology::find($tech_id);
+                                    $getTech->icon = $this->getImageFromS3($tech_id, "Icon");
+                                    $theTechnlogy[] = $getTech;
+
+                                }
+
+                                if(!empty($theTechnlogy)){
+                                    $portfolio['technologiesUsed'] = $theTechnlogy;
+                                }
+
                                 $portfolioArr[] = $portfolio;
                             }
                         }
@@ -603,10 +704,25 @@ class UserController extends Controller {
         $getProfileName = $this->getResourceName($profile_id);
 
         $ResourceName = $getProfileName['resource_name'];
+        $Profile->education = json_decode($Profile->education);
 
         if(!empty($Profile)){
-
+            $ProjectDetails =  array();
             foreach($userRequest as $portfolio){
+
+                $projects = explode(",", $portfolio->projectName);
+                foreach($projects as $project){
+                    $Project = Project::find($project);
+                    if(!empty($Project)){
+                        $ProjectStatus[] = $Project->projectStatus;
+                    }
+                }
+                if(in_array('Draft', $ProjectStatus)){
+                    $profileStatus = 'Draft';
+                }else{
+                    $profileStatus = 'Publish';
+                }
+                
 
                 $Portfolio = new Portfolio([
                     'profile_id' => $profile_id,
@@ -614,7 +730,8 @@ class UserController extends Controller {
                     'metaProfileTitle' => $portfolio->metaProfileTitle,
                     'description' => $portfolio->description,
                     'totalExperience' => $portfolio->totalExperience,
-                    'projectName' => json_encode($portfolio->projectName),
+                    // 'projectName' => json_encode($portfolio->projectName),
+                    'projectName' => ($portfolio->projectName),
                     'technologiesUsed' => json_encode($portfolio->technologiesUsed),
                     'focusArea' => $portfolio->focusArea,
                     'careerHighlights' => $portfolio->careerHighlights,
@@ -625,13 +742,65 @@ class UserController extends Controller {
                     'portfolio_pdf_url' => $portfolio->portfolio_pdf_url,
                     'profile_notes' => $portfolio->profile_notes,
                     'status' => $portfolio->status,
+                    // 'validity' => $portfolio->validity,
+                    'profileStatus' => $profileStatus,
                     'createdBy' => $createdBy,
                     'updatedBy' => $updatedBy,
                 ]);
 
+
+
                 $Portfolio->save();
-                $Portfolio->projectName = json_decode($Portfolio->projectName);
-                $Portfolio->technologiesUsed = json_decode($Portfolio->technologiesUsed);
+                // $Portfolio->projectName = json_decode($Portfolio->projectName);
+                
+
+                if(!empty($Portfolio->projectName)){
+                    $projects = explode(",", $Portfolio->projectName);
+                    $Projects = array();
+                    $ProjectStatus = array();
+                    foreach($projects as $project){
+                        $Project = Project::find($project);
+
+                        if(!empty($Project->ProjectBannerImage)){
+                            $images = explode(',', $Project->ProjectBannerImage);
+                            $ProjectGallery = array();
+                            foreach($images as $fileData){
+                                
+                                $Image['ImageId'] = md5(uniqid());
+                                $Image['file'] = $fileData;
+                                $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Project");
+                                $ProjectGallery[] = $Image;
+                            }
+                        }
+                        if(!empty($ProjectGallery)){
+                            $Project->ProjectBannerImage = $ProjectGallery;
+                        }else{
+                            $Project->ProjectBannerImage = $Project->ProjectBannerImage;
+                        }
+                    
+
+                        $ProjectDetails[] = $Project;
+                    }
+                    $Portfolio->projectName = $ProjectDetails;
+                }
+
+
+                // $Portfolio->technologiesUsed = json_decode($Portfolio->technologiesUsed);
+
+                $technologiesUsed = json_decode($Portfolio->technologiesUsed);
+                    $theTechnlogy = array();
+                    foreach($technologiesUsed as $technologies){
+                        $tech_id = $technologies->id;
+                        $getTech = Technology::find($tech_id);
+                        $getTech->icon = $this->getImageFromS3($tech_id, "Icon");
+                        $theTechnlogy[] = $getTech;
+
+                    }
+
+                    if(!empty($theTechnlogy)){
+                        $Portfolio->technologiesUsed = $theTechnlogy;
+                    }
+                    
                 $portfolioArr[] = $Portfolio;
             }
 
@@ -666,14 +835,32 @@ class UserController extends Controller {
         $updatedBy = $user['id'];
 
         // $Profile = Profile::find($userRequest->profile_id);
+        if(!empty($userRequest->projectName)){
+           $projects = explode(",", $userRequest->projectName);
+                foreach($projects as $project){
+                    $Project = Project::find($project);
+                    if(!empty($Project)){
+                        $ProjectStatus[] = $Project->projectStatus;
+                    }
+                }
+                if(in_array('Draft', $ProjectStatus)){
+                    $profileStatus = 'Draft';
+                }else{
+                    $profileStatus = 'Publish';
+                }
+        }
+            
+
             $Portfolio = Portfolio::find($portfolio_id);
             if(!empty($Portfolio)){
                 $Profile = Profile::find($Portfolio->profile_id);
+                $Profile->education = json_decode($Profile->education);
                 $Portfolio->profile_title = $userRequest->profile_title;
                 $Portfolio->metaProfileTitle = $userRequest->metaProfileTitle;
                 $Portfolio->description = $userRequest->description;
                 $Portfolio->totalExperience = $userRequest->totalExperience;
-                $Portfolio->projectName = json_encode($userRequest->projectName);
+                // $Portfolio->projectName = json_encode($userRequest->projectName);
+                $Portfolio->projectName = ($userRequest->projectName);
                 $Portfolio->technologiesUsed = json_encode($userRequest->technologiesUsed);
                 $Portfolio->focusArea = $userRequest->focusArea;
                 $Portfolio->careerHighlights = $userRequest->careerHighlights;
@@ -684,13 +871,62 @@ class UserController extends Controller {
                 $Portfolio->portfolio_pdf_url = $userRequest->portfolio_pdf_url;
                 $Portfolio->profile_notes = $userRequest->profile_notes;
                 $Portfolio->status = $userRequest->status;
+                // $Portfolio->validity = $userRequest->validity;
+                $Portfolio->profileStatus = $profileStatus;
                 $Portfolio->updatedBy = $updatedBy;
 
 
                 try{
                    ($Portfolio->save());
-                        $Portfolio->projectName = json_decode($Portfolio->projectName);
-                        $Portfolio->technologiesUsed = json_decode($Portfolio->technologiesUsed);
+                        // $Portfolio->projectName = json_decode($Portfolio->projectName);
+                        
+                        if(!empty($Portfolio->projectName)){
+                                    $projects = explode(",", $Portfolio->projectName);
+                                    $Projects = array();
+                                    foreach($projects as $project){
+                                        $Project = Project::find($project);
+
+                                if(!empty($Project->ProjectBannerImage)){
+                                    $images = explode(',', $Project->ProjectBannerImage);
+                                    $ProjectGallery = array();
+                                    foreach($images as $fileData){
+                                        
+                                        $Image['ImageId'] = md5(uniqid());
+                                        $Image['file'] = $fileData;
+                                        $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Project");
+                                        $ProjectGallery[] = $Image;
+                                    }
+                                }
+                                if(!empty($ProjectGallery)){
+                                    $Project->ProjectBannerImage = $ProjectGallery;
+                                }else{
+                                    $Project->ProjectBannerImage = $Project->ProjectBannerImage;
+                                }
+                            
+
+                                $ProjectDetails[] = $Project;
+                                }
+                                    $Portfolio->projectName = $ProjectDetails;
+                                }
+
+                        // $Portfolio->technologiesUsed = json_decode($Portfolio->technologiesUsed);
+                        $technologiesUsed = json_decode($Portfolio->technologiesUsed);
+                    $theTechnlogy = array();
+                    foreach($technologiesUsed as $technologies){
+                        $tech_id = $technologies->id;
+                        $getTech = Technology::find($tech_id);
+                        $getTech->icon = $this->getImageFromS3($tech_id, "Icon");
+                        $theTechnlogy[] = $getTech;
+
+                    }
+
+                    if(!empty($theTechnlogy)){
+                        $Portfolio->technologiesUsed = $theTechnlogy;
+                    }
+                    if($profileStatus == 'Draft'){
+                        $Portfolio->shares = 0;
+                    }
+
                         $Profile->portfolio = $Portfolio;
                         $response['status'] = true;
                         $response['message'] = 'profile updated Successfully';
@@ -699,6 +935,7 @@ class UserController extends Controller {
                 }catch(\Exception $ex){
                     $response['status'] = false;
                     $response['message'] = 'We couldn’t find that resource in our records. Try again.';
+                    // $response['message'] = $ex->getMessage();
                     return $response;
                 }
                 

@@ -103,13 +103,13 @@ trait CommonTrait	{
             $File = $getProfileImageName['galleryImage'];
             $key = "gallery/".$File;
         }
-		
+
         if(empty($File)){
             return null;
         }
 		$BucketName = 'profile-sharing-app';
         // $key = "profile/".$image;
-
+        
 		$s3 = \Storage::disk('s3');
         if (!$s3->exists($key)) {
             return null;
@@ -126,7 +126,7 @@ trait CommonTrait	{
             //     $expiry = "+10 minutes";
             // }
 
-            $expiry = "+10 minutes";
+            $expiry =  "+1440 minutes";
             $request = $client->createPresignedRequest($command, $expiry);
             return $imageUrl =  (string) $request->getUri();
         }
@@ -167,7 +167,7 @@ trait CommonTrait	{
                 'Key'    => $key
             ]);
 
-            $expiry = "+10 minutes";
+            $expiry =  "+1440 minutes";
             $request = $client->createPresignedRequest($command, $expiry);
             return $imageUrl =  (string) $request->getUri();
         }

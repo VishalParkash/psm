@@ -9,8 +9,10 @@ use App\Client;
 use App\Profile;
 use App\Portfolio;
 use App\Gallery;
+use App\Project;
 use App\SharePortfolio;
 use App\User;
+use App\Technology;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Traits\CommonTrait;
 use Carbon\Carbon;
@@ -131,7 +133,7 @@ use CommonTrait;
                         
                         $HistoryData['share_id'] = $share_id;
                         $HistoryData['client_id'] = $ClientId;
-                        $HistoryData['description'] = $clientName." viewed profile of ".$getResourceName;
+                        $HistoryData['description'] = "<span class='addHistory'>".$clientName."</span> viewed profile of ".$getResourceName;
                         $HistoryData['activityType'] = "profiles_viewed";
                         $HistoryData['loginType'] = "clientLogin";
                         $HistoryData['createdBy'] = $ClientId;
@@ -171,17 +173,74 @@ use CommonTrait;
                     $getPortfolios = $getShare['profileShared'];
                     $Portfolio_ids = explode(',', $getPortfolios);
                     if(!empty($Portfolio_ids)){
+                        // $ProjectDetails =  array();
                         foreach($Portfolio_ids as $Portfolio_id){
                             $getPortfolio = Portfolio::find($Portfolio_id);
                             if(!empty($getPortfolio)){
-                                $getPortfolio['resource_name']= $this->getResourceName($getPortfolio->profile_id)['resource_name'];
+
+                                $getProfileIds= Portfolio::select('profile_id')
+                                                            ->where('id', $Portfolio_id)
+                                                            ->where('status', 1)
+                                                            ->where('profileStatus', 'Publish')
+                                                            ->first();
+                                if(!empty($getProfileIds)){
+                                    $getPortfolio['resource_name']= $this->getResourceName($getPortfolio->profile_id)['resource_name'];
                                 $getPortfolio['profile_url']= $getPortfolio->portfolio_url;
                                 $getPortfolio['profile_title']= $getPortfolio->profile_title;
                                 $getPortfolio['id']= $getPortfolio->id;
                                 $getPortfolio['pdfUrl']= $this->getImageFromS3($getPortfolio->id, 'Portfolio');
 
-                                $getPortfolio['projectName'] = json_decode($getPortfolio->projectName);
-                                $getPortfolio['technologiesUsed'] = json_decode($getPortfolio->technologiesUsed);
+                                // $getPortfolio['projectName'] = json_decode($getPortfolio->projectName);
+
+                                if(!empty($getPortfolio->projectName)){
+                                    $ProjectDetails =  array();
+                                    $projects = explode(",", $getPortfolio->projectName);
+                                    $Projects = array();
+                                    foreach($projects as $project){
+                                        $Project = Project::find($project);
+                                        if(!empty($Project)){
+                                            $Project= $Project->toArray();
+                                        
+                                if(!empty($Project['ProjectBannerImage'])){
+                                    $images = explode(',', $Project['ProjectBannerImage']);
+                                    $ProjectGallery = array();
+                                    foreach($images as $fileData){
+                                        
+                                        $Image['ImageId'] = md5(uniqid());
+                                        $Image['file'] = $fileData;
+                                        $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Project");
+                                        $ProjectGallery[] = $Image;
+                                    }
+                                }
+                                if(!empty($ProjectGallery)){
+                                    $Project['ProjectBannerImage'] = $ProjectGallery;
+                                }else{
+                                    $Project['ProjectBannerImage'] = $Project['ProjectBannerImage'];
+                                }
+                            
+                            }
+                                $ProjectDetails[] = $Project;
+                                }
+                                    $getPortfolio['projectName'] = $ProjectDetails;
+                                }
+
+                                $technologiesUsed = json_decode($getPortfolio->technologiesUsed);
+                                $theTechnlogy = array();
+                                foreach($technologiesUsed as $technologies){
+                                    $tech_id = $technologies->id;
+                                    $getTech = Technology::find($tech_id);
+                                    $getTech->icon = $this->getImageFromS3($tech_id, "Icon");
+                                    $theTechnlogy[] = $getTech;
+
+                                }
+
+                                if(!empty($theTechnlogy)){
+                                    $getPortfolio['technologiesUsed'] = $theTechnlogy;
+                                }
+                                
+
+
+
                                 $getPortfolio['image'] = $this->getImageFromS3($getPortfolio->profile_id, 'Profile');
                                 $getPortfolio['bannerImage'] = $this->getImageFromS3($getPortfolio->profile_id, 'profileBannerImage');
                                 
@@ -207,6 +266,11 @@ use CommonTrait;
                                 }else{
                                     $getPortfolio['gallery'] = array();
                                 }
+                                }else{
+                                    $getPortfolio = array();
+                                } 
+
+                                
                             }
                             if(!empty($getPortfolio)){
                                 $ProfileArr[] = $getPortfolio;
@@ -263,16 +327,70 @@ use CommonTrait;
                         $getPortfolios = $getShare['profileShared'];
                         $Portfolio_ids = explode(',', $getPortfolios);
                         if(!empty($Portfolio_ids)){
+                            // $ProjectDetails =  array();
                             foreach($Portfolio_ids as $Portfolio_id){
                                 $getPortfolio = Portfolio::find($Portfolio_id);
                                 if(!empty($getPortfolio)){
+
+                                    $getProfileIds= Portfolio::select('profile_id')
+                                                            ->where('id', $Portfolio_id)
+                                                            ->where('status', 1)
+                                                            ->where('profileStatus', 'Publish')
+                                                            ->first();
+
+                                    if(!empty($getProfileIds)){
                                     $getPortfolio = $getPortfolio->toArray();
                                     $getPortfolio['resource_name']= $this->getResourceName($getPortfolio['profile_id'])['resource_name'];
                                     $getPortfolio['profile_url']= $getPortfolio['portfolio_url'];
                                     $getPortfolio['profile_title']= $getPortfolio['profile_title'];
                                     $getPortfolio['id']= $getPortfolio['id'];
-                                    $portfolio['projectName'] = json_decode($getPortfolio['projectName']);
-                                    $portfolio['technologiesUsed'] = json_decode($getPortfolio['technologiesUsed']);
+                                    // $portfolio['projectName'] = json_decode($getPortfolio['projectName']);
+
+                                    if(!empty($getPortfolio['projectName'])){
+                                    $ProjectDetails =  array();
+                                    $projects = explode(",", $getPortfolio['projectName']);
+                                    $Projects = array();
+                                    foreach($projects as $project){
+                                        $Project = Project::find($project);
+
+                                if(!empty($Project->ProjectBannerImage)){
+                                    $images = explode(',', $Project->ProjectBannerImage);
+                                    $ProjectGallery = array();
+                                    foreach($images as $fileData){
+                                        
+                                        $Image['ImageId'] = md5(uniqid());
+                                        $Image['file'] = $fileData;
+                                        $Image['fileUrl'] = $this->getImageUrlFromS3($fileData, "Project");
+                                        $ProjectGallery[] = $Image;
+                                    }
+                                }
+                                if(!empty($ProjectGallery)){
+                                    $Project->ProjectBannerImage = $ProjectGallery;
+                                }else{
+                                    $Project->ProjectBannerImage = $Project->ProjectBannerImage;
+                                }
+                            
+
+                                $ProjectDetails[] = $Project;
+                            }
+                                    $getPortfolio['projectName'] = $ProjectDetails;
+                                }
+
+                                $technologiesUsed = json_decode($getPortfolio['technologiesUsed']);
+                                $theTechnlogy = array();
+                                foreach($technologiesUsed as $technologies){
+                                    $tech_id = $technologies->id;
+                                    $getTech = Technology::find($tech_id);
+                                    $getTech->icon = $this->getImageFromS3($tech_id, "Icon");
+                                    $theTechnlogy[] = $getTech;
+
+                                }
+
+                                if(!empty($theTechnlogy)){
+                                    $getPortfolio['technologiesUsed'] = $theTechnlogy;
+                                }
+
+                                    // $portfolio['technologiesUsed'] = json_decode($getPortfolio['technologiesUsed']);
                                     $getPortfolio['pdfUrl']= $this->getImageFromS3($getPortfolio['id'], 'Portfolio');
                                     $getPortfolio['image'] = $this->getImageFromS3($getPortfolio['profile_id'], 'Profile');
                                     $getPortfolio['bannerImage'] = $this->getImageFromS3($getPortfolio['profile_id'], 'profileBannerImage');
@@ -299,6 +417,9 @@ use CommonTrait;
                                     }else{
                                         $getPortfolio['gallery'] = array();
                                     }
+                                }else{
+                                    $getPortfolio = array();
+                                } 
                                 }
                                 $ProfileArr[] = $getPortfolio;
                             }

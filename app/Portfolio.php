@@ -10,6 +10,6 @@ class Portfolio extends Model
     //
 
     use SoftDeletes;
-    protected $dates = ['validity'];
+    // protected $dates = ['validity'];
     protected $guarded = [];
 }

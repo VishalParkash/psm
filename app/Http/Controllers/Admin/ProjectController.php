@@ -88,10 +88,7 @@ class ProjectController extends Controller
         		(!empty($userRequest->projectName)) && 
         		(!empty($userRequest->projectDescription)) &&
         		(!empty($userRequest->technologyUsed)) &&
-        		(!empty($userRequest->projectUrl)) &&
         		(!empty($userRequest->RoleOnTheProject)) &&
-        		(!empty($userRequest->caseStudyUrl)) &&
-        		(!empty($userRequest->codeSnippets)) &&
         		(!empty($userRequest->ProjectBannerImage))){
         			$projectStatus = 'Publish';
         	}else{
@@ -118,6 +115,10 @@ class ProjectController extends Controller
         		return $response;
         	}
         	$Project_id = $Project->id;
+            // $Project->createdOn = Carbon::now()->toDateTimeString();
+            $Project->createdOn = strtotime($Project->created_at);
+            $Project->updatedOn = strtotime($Project->updated_at);
+
         	if(!empty($Project->ProjectBannerImage)){
         		$images = explode(',', $Project->ProjectBannerImage);
         		$ProjectGallery = array();
@@ -168,6 +169,9 @@ class ProjectController extends Controller
     	$Projects = Project::all();
     	if(!empty($Projects)){
     		foreach($Projects as $project){
+                // $project->created_at = 
+                $project->createdOn = strtotime($project->created_at);
+                $project->updatedOn = strtotime($project->updated_at);
 
     			// $project->ProjectBannerImage = $this->getImageFromS3($project->id, "Project");
 
@@ -189,8 +193,6 @@ class ProjectController extends Controller
         	}else{
         		$project->ProjectBannerImage = $project->ProjectBannerImage;
         	}
-        	
-
     			$ProjectDetails[] = $project;
     		}
     		$response['status'] = true;

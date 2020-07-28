@@ -61,9 +61,9 @@ class ClientController extends Controller
             $getShare = Share::where('queryString','=', $queryString)
                                 ->where('status', 1)
                                 ->first();
-                                // echo "<pre>";print_r($getShare);die;
+                                
             if(!empty($getShare)){
-
+                    // echo "<pre>";print_r($getShare);die;
                 $getShareValidityDate = $getShare->validity;
                 
                 if(Carbon::now() > $getShareValidityDate){
